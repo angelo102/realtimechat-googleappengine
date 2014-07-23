@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+{% autoescape true %}
+<html>
+ 
+  <head>
+     <script type="text/javascript" src="/_ah/channel/jsapi"></script>
+     <link rel="stylesheet" href="/bootstrap/css/bootstrap.css">
+  </head>
+  <body>
+     <script type='text/javascript'>
+        var state = {
+          client_key: '{{client_key}}'
+        };
+
+        onOpened = function() {
+          var xhr = new XMLHttpRequest();
+          xhr.open('POST', '/opened?client_key='+state.client_key.trim(), true);
+          xhr.send();
+        };
+
+        onMessage = function(m) {
+          //if the message is the log history
+          if(m.data.substring(0,4) == "&log"){
+            str_array = m.data.split("&");
+            for( i=2; i<str_array.length; i++){
+              document.getElementById("textarea").value += str_array[i]+"\n";
+            }
+          }
+          else{
+            //input message on the text area
+            document.getElementById("textarea").value += m.data+"\n";
+          }
+          //goto last line of textarea
+          document.getElementById('textarea').scrollTop = 999999 ;
+        };
+
+        onClose = function(){
+          var xhr = new XMLHttpRequest();
+          xhr.open('POST','/closed?client_key='+state.client_key, true);
+          xhr.send();
+        };
+
+        openChannel = function() {
+          var token = '{{token}}';
+          console.log(token);
+          var channel = new goog.appengine.Channel(token.trim());
+          var handler = {
+            'onopen': onOpened,
+            'onmessage': onMessage,
+            'onerror': function(){},
+            'onclose': function(){}
+          };
+          var socket = channel.open(handler);
+          socket.onopen = onOpened;
+          socket.onmessage = onMessage;
+        };
+
+        sendMessage = function() {
+          //get message input from user
+          chatMessage = document.getElementById('inputtext').value;
+          postMessage = '/message?client_key='+state.client_key+"&m="+chatMessage
+          console.log("sendMesage state key: "+state.client_key);
+
+          var xhr = new XMLHttpRequest();
+          xhr.open('POST', postMessage, true);
+          xhr.send();
+
+          //Clean  html input
+          document.getElementById('inputtext').value = "";
+          //goto last line of textarea
+          document.getElementById('textarea').scrollTop = 999999 ;
+        };
+
+        //Enter keypress on input text
+        onEnterEvent = function(e){
+          console.log("onEnterEvent")
+          if( e.keyCode == 13 ){
+            sendMessage()
+          }
+        };
+
+        sendMessage2 = function() {
+          var xhr = new XMLHttpRequest();
+          xhr.open('POST', '/del', true);
+          xhr.send();
+        };
+
+        setTimeout(openChannel, 500);
+       
+      </script>
+      <h2>Real Time Chat Using Google App Engine Channel API </h2>
+      <pre>Logged in as: {{user}}</pre>
+      <textarea id="textarea" class="form-control" rows="20" ></textarea>
+      </br>
+      <input type="text" class="form-control" id="inputtext" onkeypress="return onEnterEvent(event)" value="">
+      </br>
+      <button class="btn btn-primary" onclick="sendMessage()">Insert Text</button>
+      <!--<button onclick="sendMessage2()">Delete</button> -->
+      </br>
+      </br>
+      <a href="{{ url|safe }}" onClick="onClose()">{{ url_linktext }}  </a>
+      <p>{{token}}</p>
+  </body>
+</html>
+{% endautoescape %}
